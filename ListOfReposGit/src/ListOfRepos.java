@@ -1,54 +1,65 @@
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.cdimascio.dotenv.Dotenv;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.json.JSONArray;
-import org.json.JSONObject;
-import io.github.cdimascio.dotenv.Dotenv;
-
 public class ListOfRepos {
 
+    private final HttpClient client;
+    private final String token;
+    private final ObjectMapper objectMapper;
+
+    public ListOfRepos() {
+        this.client = HttpClient.newHttpClient();
+        this.token = loadToken();
+        this.objectMapper = new ObjectMapper();
+    }
+
     public int getRepos(String username) throws IOException, InterruptedException {
-    	Dotenv dotenv = Dotenv.load(); // Automatically loads from .env in project root
-    	String token = dotenv.get("GITHUB_TOKEN");
-        HttpClient client = HttpClient.newHttpClient();
-
-        // Step 1: Get user's repositories
-        HttpRequest repoRequest = HttpRequest.newBuilder()
-                .uri(URI.create("https://api.github.com/users/" + username + "/repos"))
-                .header("Authorization", "token " + token)
-                .header("Accept", "application/vnd.github.v3+json")
-                .build();
-
-        HttpResponse<String> repoResponse = client.send(repoRequest, HttpResponse.BodyHandlers.ofString());
-
-        // === ERROR HANDLING FOR NON-EXISTING USER ===
-        if (repoResponse.statusCode() == 404) {
-            printError(404, "GitHub user not found");
-            return -1;
-        } else if (repoResponse.statusCode() != 200) {
-            printError(repoResponse.statusCode(), "Failed to fetch user repositories");
-            return -1;
-        }
-
-        JSONArray repos = new JSONArray(repoResponse.body());
-
+        JSONArray repos = fetchUserRepositories(username);
+        if (repos == null) return -1;
         if (repos.length() == 0) {
             System.out.println("No repositories found for user: " + username);
             return 0;
         }
 
-        // Print owner login ONCE at the top
+        printOwnerInfo(repos);
+        int count = printRepositoriesAndBranches(username, repos);
+        return count >= 0 ? 0 : -1;
+    }
+
+    private JSONArray fetchUserRepositories(String username) throws IOException, InterruptedException {
+        HttpRequest request = buildGetRequest("https://api.github.com/users/" + username + "/repos");
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        int code = response.statusCode();
+
+        if (code == 404) {
+            printError(404, "GitHub user not found");
+            return null;
+        } else if (code != 200) {
+            printError(code, "Failed to fetch user repositories");
+            return null;
+        }
+
+        return new JSONArray(response.body());
+    }
+
+    private void printOwnerInfo(JSONArray repos) {
         String ownerLogin = repos.getJSONObject(0).getJSONObject("owner").getString("login");
         System.out.println("Owner: " + ownerLogin);
         System.out.println("-----------------------------------");
+    }
 
+    private int printRepositoriesAndBranches(String username, JSONArray repos) throws IOException, InterruptedException {
         int repoCount = 0;
-
         for (int i = 0; i < repos.length(); i++) {
             JSONObject repo = repos.getJSONObject(i);
             if (repo.getBoolean("fork")) continue;
@@ -57,52 +68,62 @@ public class ListOfRepos {
             String repoName = repo.getString("name");
             System.out.println("Repository #" + repoCount + ": " + repoName);
 
-            // Step 2: Get branches and last commit SHA
-            String branchesUrl = "https://api.github.com/repos/" + username + "/" + repoName + "/branches";
-            HttpRequest branchRequest = HttpRequest.newBuilder()
-                    .uri(URI.create(branchesUrl))
-                    .header("Authorization", "token " + token)
-                    .header("Accept", "application/vnd.github.v3+json")
-                    .build();
-
-            HttpResponse<String> branchResponse = client.send(branchRequest, HttpResponse.BodyHandlers.ofString());
-
-            if (branchResponse.statusCode() == 200) {
-                JSONArray branches = new JSONArray(branchResponse.body());
-
-                for (int j = 0; j < branches.length(); j++) {
-                    JSONObject branch = branches.getJSONObject(j);
-                    String branchName = branch.getString("name");
-                    String sha = branch.getJSONObject("commit").getString("sha");
-
-                    System.out.println("  - Branch: " + branchName + ", SHA: " + sha);
-                }
-            } else {
-                System.out.println("  Failed to fetch branches. Status: " + branchResponse.statusCode());
-            }
-
+            printBranches(username, repoName);
             System.out.println("-----------------------------------");
         }
+        return repoCount;
+    }
 
-        return 0;
+    private void printBranches(String username, String repoName) throws IOException, InterruptedException {
+        String url = "https://api.github.com/repos/" + username + "/" + repoName + "/branches";
+        HttpRequest request = buildGetRequest(url);
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() == 200) {
+            JSONArray branches = new JSONArray(response.body());
+            for (int j = 0; j < branches.length(); j++) {
+                JSONObject branch = branches.getJSONObject(j);
+                String branchName = branch.getString("name");
+                String sha = branch.getJSONObject("commit").getString("sha");
+                System.out.println("  - Branch: " + branchName + ", SHA: " + sha);
+            }
+        } else {
+            System.out.println("  Failed to fetch branches. Status: " + response.statusCode());
+        }
+    }
+
+    private HttpRequest buildGetRequest(String url) {
+        return HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("Authorization", "token " + token)
+                .header("Accept", "application/vnd.github.v3+json")
+                .build();
+    }
+
+    private String loadToken() {
+        Dotenv dotenv = Dotenv.load();
+        String t = dotenv.get("GITHUB_TOKEN");
+        if (t == null || t.isBlank()) {
+            throw new RuntimeException("GITHUB_TOKEN not found in .env");
+        }
+        return t;
     }
 
     private void printError(int status, String message) {
         try {
-            ObjectMapper mapper = new ObjectMapper();
-            String json = mapper
+            String json = objectMapper
                     .writerWithDefaultPrettyPrinter()
                     .writeValueAsString(new ResponseError(status, message));
             System.out.println(json);
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("Error creating error JSON: " + e.getMessage());
         }
     }
 
-    @JsonPropertyOrder({ "status", "message" })  // Enforce order
+    @JsonPropertyOrder({"status", "message"})
     static class ResponseError {
-        private int status;
-        private String message;
+        private final int status;
+        private final String message;
 
         public ResponseError(int status, String message) {
             this.status = status;
