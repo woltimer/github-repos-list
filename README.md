@@ -56,8 +56,8 @@ A simple Java application that fetches all public repositories of a given GitHub
    new ListOfRepos().getRepos("torvalds");
    ```
    You can change "torvalds" to any valid GitHub username.
-   ⚠️ REMEMBER
-   You need to build project again after changing a username.
+   ⚠️ REMEMBER:
+   You need to build project again after changing the username.
 
 ## Running Tests
 ```bash
