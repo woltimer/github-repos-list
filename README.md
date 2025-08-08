@@ -30,10 +30,20 @@ A simple Java application that fetches all public repositories of a given GitHub
 1. **Clone the repository**
    ```bash
    git clone https://github.com/woltimer/github-repos-list.git
-2. **Build the project while being in the ListOfReposGit directory**
+2. **Go to ListOfReposGit directory**
+   ```bash
+   ex. cd .../repos/github-repos-list/ListOfReposGit/
+3. **Create .env file and put your GitHub REST API token there**
+   ```bash
+   touch .env
+   ```
+   ```yaml
+   GITHUB_TOKEN=your_token
+   ```
+5. **Build the project**
    ```bash
    mvn clean install
-4. **Run the application**
+6. **Run the application**
    ```bash
    mvn exec:java -Dexec.mainClass="main"
    ```
