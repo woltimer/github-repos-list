@@ -14,16 +14,17 @@ import java.nio.charset.StandardCharsets;
 
 public class ListOfRepos {
 
+    // Finals modifiers to avoid reference changes, but allow methods
     private final HttpClient client;
     private final String token;
     private final ObjectMapper objectMapper;
 
-    public ListOfRepos() {
+    public ListOfRepos() { // Object building
         this.client = HttpClient.newHttpClient();
         this.token = loadToken();
         this.objectMapper = new ObjectMapper();
     }
-
+    // Main method. Returning int's left for easier debbuging
     public int getRepos(String username) throws IOException, InterruptedException {
         JSONArray repos = fetchUserRepositories(username);
         if (repos == null) return -1;
@@ -36,7 +37,7 @@ public class ListOfRepos {
         int count = printRepositoriesAndBranches(username, repos);
         return count >= 0 ? 0 : -1;
     }
-
+    // Checks if fetching data is possible and does it. If not possible throws errors.
     private JSONArray fetchUserRepositories(String username) throws IOException, InterruptedException {
         String safeUsername = URLEncoder.encode(username, StandardCharsets.UTF_8);
         String url = "https://api.github.com/users/" + safeUsername + "/repos";
@@ -62,13 +63,13 @@ public class ListOfRepos {
 
         return new JSONArray(response.body());
     }
-
+    // Printing login of the owner of repositories
     private void printOwnerInfo(JSONArray repos) {
         String ownerLogin = repos.getJSONObject(0).getJSONObject("owner").getString("login");
         System.out.println("Owner: " + ownerLogin);
         System.out.println("-----------------------------------");
     }
-
+    // Connecting branches to repositories
     private int printRepositoriesAndBranches(String username, JSONArray repos) throws IOException, InterruptedException {
         int repoCount = 0;
         for (int i = 0; i < repos.length(); i++) {
@@ -84,7 +85,7 @@ public class ListOfRepos {
         }
         return repoCount;
     }
-
+    // Building the branches from repositories and printing them
     private void printBranches(String username, String repoName) throws IOException, InterruptedException {
         String safeUsername = URLEncoder.encode(username, StandardCharsets.UTF_8);
         String safeRepoName = URLEncoder.encode(repoName, StandardCharsets.UTF_8);
@@ -113,7 +114,7 @@ public class ListOfRepos {
         }
     }
 
-    private HttpRequest buildGetRequest(String url) {
+    private HttpRequest buildGetRequest(String url) { // Builds request for the API server
         return HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .header("Authorization", "token " + token)
@@ -121,7 +122,7 @@ public class ListOfRepos {
                 .build();
     }
 
-    private String loadToken() {
+    private String loadToken() { // Loads GitHub REST API token from the .env file
         Dotenv dotenv = Dotenv.load();
         String t = dotenv.get("GITHUB_TOKEN");
         if (t == null || t.isBlank()) {
@@ -130,7 +131,7 @@ public class ListOfRepos {
         return t;
     }
 
-    private void printError(int status, String message) {
+    private void printError(int status, String message) { // Builds an error
         try {
             String json = objectMapper
                     .writerWithDefaultPrettyPrinter()
@@ -141,7 +142,7 @@ public class ListOfRepos {
         }
     }
 
-    @JsonPropertyOrder({"status", "message"})
+    @JsonPropertyOrder({"status", "message"}) // Enforces right order of the error messages
     static class ResponseError {
         private final int status;
         private final String message;
