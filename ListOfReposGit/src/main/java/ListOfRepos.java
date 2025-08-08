@@ -6,9 +6,11 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 
 public class ListOfRepos {
 
@@ -36,7 +38,16 @@ public class ListOfRepos {
     }
 
     private JSONArray fetchUserRepositories(String username) throws IOException, InterruptedException {
-        HttpRequest request = buildGetRequest("https://api.github.com/users/" + username + "/repos");
+        String safeUsername = URLEncoder.encode(username, StandardCharsets.UTF_8);
+        String url = "https://api.github.com/users/" + safeUsername + "/repos";
+
+        HttpRequest request;
+        try {
+            request = buildGetRequest(url);
+        } catch (IllegalArgumentException e) {
+            printError(400, "Invalid username: " + username);
+            return null;
+        }
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         int code = response.statusCode();
@@ -75,8 +86,18 @@ public class ListOfRepos {
     }
 
     private void printBranches(String username, String repoName) throws IOException, InterruptedException {
-        String url = "https://api.github.com/repos/" + username + "/" + repoName + "/branches";
-        HttpRequest request = buildGetRequest(url);
+        String safeUsername = URLEncoder.encode(username, StandardCharsets.UTF_8);
+        String safeRepoName = URLEncoder.encode(repoName, StandardCharsets.UTF_8);
+        String url = "https://api.github.com/repos/" + safeUsername + "/" + safeRepoName + "/branches";
+
+        HttpRequest request;
+        try {
+            request = buildGetRequest(url);
+        } catch (IllegalArgumentException e) {
+            printError(400, "Invalid repository name: " + repoName);
+            return;
+        }
+
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() == 200) {
@@ -139,3 +160,4 @@ public class ListOfRepos {
         }
     }
 }
+
