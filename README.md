@@ -30,7 +30,7 @@ A simple Java application that fetches all public repositories of a given GitHub
 1. **Clone the repository**
    ```bash
    git clone https://github.com/woltimer/github-repos-list.git
-2. **Build the project**
+2. **Build the project while being in the ListOfReposGit directory**
    ```bash
    mvn clean install
 4. **Run the application**
