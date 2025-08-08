@@ -26,7 +26,7 @@ A simple Java application that fetches all public repositories of a given GitHub
 - **Maven** for dependency management and build
 
 ## Installation & Setup
-
+⚠️ Warning: Instructions are aimed for the Linux users!
 1. **Clone the repository**
    ```bash
    git clone https://github.com/woltimer/github-repos-list.git
@@ -36,6 +36,10 @@ A simple Java application that fetches all public repositories of a given GitHub
 3. **Create .env file and put your GitHub REST API token there**
    ```bash
    touch .env
+   ```
+   You can use nano to edit:
+   ```bash
+   nano .env
    ```
    ```yaml
    GITHUB_TOKEN=your_token
