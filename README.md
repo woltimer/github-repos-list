@@ -1,7 +1,7 @@
 # github-repos-list
 A GitHub REST API use task
 
-![Java](https://img.shields.io/badge/Java-22%2B-blue)
+![Java](https://img.shields.io/badge/Java-17+%2B-blue)
 ![Maven](https://img.shields.io/badge/Maven-Build-brightgreen)
 ![JUnit](https://img.shields.io/badge/Tests-JUnit%205-orange)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
