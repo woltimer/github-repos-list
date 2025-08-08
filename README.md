@@ -45,7 +45,7 @@ A simple Java application that fetches all public repositories of a given GitHub
    mvn clean install
 6. **Run the application**
    ```bash
-   mvn exec:java -Dexec.mainClass="main"
+   mvn exec:java -Dexec.mainClass="Main"
    ```
    By default, the username is hardcoded in main.java
    ```java
